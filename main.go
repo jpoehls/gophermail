@@ -33,7 +33,7 @@ type Message struct {
 
 	Attachments []Attachment // optional
 
-	// TODO(JPOEHLS): Support extra mail headers? Things on On-Behalf-Of, In-Reply-To, List-Unsubscribe, etc.
+	// TODO(JPOEHLS): Support extra mail headers? Things like On-Behalf-Of, In-Reply-To, List-Unsubscribe, etc.
 }
 
 // An Attachment represents an email attachment.
