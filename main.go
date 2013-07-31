@@ -10,11 +10,6 @@ import (
 	"strings"
 )
 
-// Inspired by https://code.google.com/p/appengine-go/source/browse/appengine/mail/mail.go
-// and https://github.com/AeroNotix/libsmtp/blob/master/smtp.go
-
-// MIME Linter: http://www.apps.ietf.org/content/message-lint
-
 const crlf = "\r\n"
 
 var ErrMissingRecipient = errors.New("No recipient specified. At one To, Cc, or Bcc recipient is required.")
