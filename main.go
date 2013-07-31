@@ -10,6 +10,11 @@ import (
 	"strings"
 )
 
+// TODO(JPOEHLS): Use github.com/sloonz/go-qprintable for encoding the Body and HTMLBody
+// TODO(JPOEHLS): Figure out how we should encode header values (Q encoding?)
+// TODO(JPOEHLS): Refactor writeHeader() to accept a textproto.MIMEHeader
+// TODO(JPOEHLS): Add support for attachments
+
 const crlf = "\r\n"
 
 var ErrMissingRecipient = errors.New("No recipient specified. At one To, Cc, or Bcc recipient is required.")
