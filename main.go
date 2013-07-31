@@ -57,13 +57,22 @@ func (m *Message) Build() ([]byte, error) {
 		return nil, ErrMissingRecipient
 	} else {
 		if hasTo {
-			writeHeader(buffer, "To", strings.Join(m.To, ","))
+			err := writeHeader(buffer, "To", strings.Join(m.To, ","))
+			if err != nil {
+				return nil, err
+			}
 		}
 		if hasCc {
-			writeHeader(buffer, "Cc", strings.Join(m.Cc, ","))
+			err := writeHeader(buffer, "Cc", strings.Join(m.Cc, ","))
+			if err != nil {
+				return nil, err
+			}
 		}
 		if hasBcc {
-			writeHeader(buffer, "Bcc", strings.Join(m.Bcc, ","))
+			err := writeHeader(buffer, "Bcc", strings.Join(m.Bcc, ","))
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -77,36 +86,62 @@ func (m *Message) Build() ([]byte, error) {
 	if m.Sender == "" {
 		return nil, ErrMissingSender
 	} else {
-		writeHeader(buffer, "From", m.Sender)
+		err := writeHeader(buffer, "From", m.Sender)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Optional ReplyTo
 	if m.ReplyTo != "" {
-		writeHeader(buffer, "Reply-To", m.ReplyTo)
+		err := writeHeader(buffer, "Reply-To", m.ReplyTo)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Optional Subject
 	if m.Subject != "" {
-		writeHeader(buffer, "Subject", m.Subject)
+		err := writeHeader(buffer, "Subject", m.Subject)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	mixedw := multipart.NewWriter(buffer)
 
-	writeHeader(buffer, "MIME-Version", "1.0")
-	writeHeader(buffer, "Content-Type", fmt.Sprintf("multipart/mixed; boundary=%s", mixedw.Boundary()))
+	var err error
+
+	err = writeHeader(buffer, "MIME-Version", "1.0")
+	if err != nil {
+		return nil, err
+	}
+	err = writeHeader(buffer, "Content-Type", fmt.Sprintf("multipart/mixed; boundary=%s", mixedw.Boundary()))
+	if err != nil {
+		return nil, err
+	}
 
 	// Add a spacer between our header and the first part.
-	write(buffer, crlf)
+	_, err = fmt.Fprint(buffer, crlf)
+	if err != nil {
+		return nil, err
+	}
 
 	var header textproto.MIMEHeader
 
 	if m.Body != "" || m.HTMLBody != "" {
 
 		altw := multipart.NewWriter(buffer)
-		writeHeader(buffer, "Content-Type", fmt.Sprintf("multipart/alternative; boundary=%s", altw.Boundary()))
+		err := writeHeader(buffer, "Content-Type", fmt.Sprintf("multipart/alternative; boundary=%s", altw.Boundary()))
+		if err != nil {
+			return nil, err
+		}
 
 		// Add a spacer between our header and the first part.
-		write(buffer, crlf)
+		_, err = fmt.Fprint(buffer, crlf)
+		if err != nil {
+			return nil, err
+		}
 
 		if m.Body != "" {
 			header = textproto.MIMEHeader{}
@@ -118,11 +153,8 @@ func (m *Message) Build() ([]byte, error) {
 				return nil, err
 			}
 
-			err = write(
-				partw,
-				// TODO(JPOEHLS): Do we need to escape any specific characters in the body or wrap long lines?
-				m.Body,
-			)
+			// TODO(JPOEHLS): Do we need to escape any specific characters in the body or wrap long lines?
+			_, err = fmt.Fprint(partw, m.Body)
 			if err != nil {
 				return nil, err
 			}
@@ -138,11 +170,8 @@ func (m *Message) Build() ([]byte, error) {
 				return nil, err
 			}
 
-			err = write(
-				partw,
-				// TODO(JPOEHLS): Do we need to escape any specific characters in the body or wrap long lines?
-				m.HTMLBody,
-			)
+			// TODO(JPOEHLS): Do we need to escape any specific characters in the body or wrap long lines?
+			_, err = fmt.Fprint(partw, m.HTMLBody)
 			if err != nil {
 				return nil, err
 			}
@@ -160,9 +189,18 @@ func (m *Message) Build() ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-func writeHeader(w io.Writer, key, value string) {
+var headerNewlineToSpace = strings.NewReplacer("\n", " ", "\r", " ")
+
+func writeHeader(w io.Writer, key, value string) error {
 	// TODO(JPOEHLS): Do we need to worry about escaping certain characters in the value or wrapping long values to multiple lines? For example a really long recipient list.
-	write(w, fmt.Sprintf("%s: %s%s", key, value, crlf))
+
+	// Clean key and value like http.Header.Write() does.
+	key = textproto.CanonicalMIMEHeaderKey(key)
+	value = headerNewlineToSpace.Replace(value)
+	value = textproto.TrimString(value)
+
+	_, err := fmt.Fprintf(w, "%s: %s%s", value, crlf, crlf)
+	return err
 }
 
 // Helper method to make writing to an io.Writer over and over nicer.
