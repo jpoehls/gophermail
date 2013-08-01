@@ -3,7 +3,7 @@
 This package aims to be a simple mail package Go.
 Something that the core sorely lacks.
 
-**It doesn't work yet.**
+**It barely works.**
 
 ## Credits
 
