@@ -14,7 +14,6 @@ import (
 // TODO(JPOEHLS): Figure out how we should encode header values (Q encoding?)
 // TODO(JPOEHLS): Refactor writeHeader() to accept a textproto.MIMEHeader
 // TODO(JPOEHLS): Add support for attachments
-// TODO(JPOEHLS): Add a SendMessage() SMTP function
 
 const crlf = "\r\n"
 
