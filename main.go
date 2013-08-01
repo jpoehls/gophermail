@@ -7,7 +7,6 @@ import (
 	"github.com/sloonz/go-qprintable"
 	"io"
 	"mime/multipart"
-	"net/smtp"
 	"net/textproto"
 	"strings"
 )
@@ -222,54 +221,4 @@ func write(w io.Writer, data ...string) error {
 		}
 	}
 	return nil
-}
-
-// SendMessage connects to the server at addr, switches to TLS if possible,
-// authenticates with mechanism a if possible, and then sends an email from
-// address from, to addresses to, with message msg.
-func SendMessage(addr string, a smtp.Auth, msg *Message) error {
-
-	// TODO(JPOEHLS): Make this work. Add support for RCPT BCC and RCPT CC commands. GAH!
-	return nil
-
-	/*	c, err := smtp.Dial(addr)
-		if err != nil {
-			return err
-		}
-		if err := c.hello(); err != nil {
-			return err
-		}
-		if ok, _ := c.Extension("STARTTLS"); ok {
-			if err = c.StartTLS(nil); err != nil {
-				return err
-			}
-		}
-		if a != nil && c.ext != nil {
-			if _, ok := c.ext["AUTH"]; ok {
-				if err = c.Auth(a); err != nil {
-					return err
-				}
-			}
-		}
-		if err = c.Mail(from); err != nil {
-			return err
-		}
-		for _, addr := range to {
-			if err = c.Rcpt(addr); err != nil {
-				return err
-			}
-		}
-		w, err := c.Data()
-		if err != nil {
-			return err
-		}
-		_, err = w.Write(msg.Bytes())
-		if err != nil {
-			return err
-		}
-		err = w.Close()
-		if err != nil {
-			return err
-		}
-		return c.Quit()*/
 }
