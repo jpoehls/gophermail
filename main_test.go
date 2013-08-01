@@ -1,10 +1,11 @@
-package main
+package gophermail
 
 import (
+	"net/smtp"
 	"testing"
 )
 
-func Test_Build(t *testing.T) {
+func Test_Bytes(t *testing.T) {
 	m := &Message{}
 	m.Sender = "sender@domain.com"
 	m.To = []string{"to_1@domain.com", "to_2@domain.com"}
@@ -12,7 +13,7 @@ func Test_Build(t *testing.T) {
 	m.Body = "My Plain Tex Body"
 	m.HTMLBody = "<p>My <b>HTML</b> Body</p>"
 
-	bytes, err := m.Build()
+	bytes, err := m.Bytes()
 	if err != nil {
 		t.Log(err)
 		t.Fail()

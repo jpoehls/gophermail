@@ -1,19 +1,21 @@
-package main
+package gophermail
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/sloonz/go-qprintable"
 	"io"
 	"mime/multipart"
+	"net/smtp"
 	"net/textproto"
 	"strings"
 )
 
-// TODO(JPOEHLS): Use github.com/sloonz/go-qprintable for encoding the Body and HTMLBody
 // TODO(JPOEHLS): Figure out how we should encode header values (Q encoding?)
 // TODO(JPOEHLS): Refactor writeHeader() to accept a textproto.MIMEHeader
 // TODO(JPOEHLS): Add support for attachments
+// TODO(JPOEHLS): Add a SendMessage() SMTP function
 
 const crlf = "\r\n"
 
@@ -50,7 +52,8 @@ type Attachment struct {
 	// TODO(JPOEHLS): Does it make sense to support an io.Reader instead of (or in addition to?) []byte so that data can be streamed in to save memory?
 }
 
-func (m *Message) Build() ([]byte, error) {
+// Gets the encoded message data bytes.
+func (m *Message) Bytes() ([]byte, error) {
 	var buffer = &bytes.Buffer{}
 
 	// Require To, Cc, or Bcc
@@ -151,15 +154,16 @@ func (m *Message) Build() ([]byte, error) {
 		if m.Body != "" {
 			header = textproto.MIMEHeader{}
 			header.Add("Content-Type", "text/plain; charset=UTF8")
-			// TODO(JPOEHLS): Do we need a Content-Transfer-Encoding: quoted-printable header? What does that mean?
+			header.Add("Content-Transfer-Encoding", "quoted-printable")
 
 			partw, err := altw.CreatePart(header)
 			if err != nil {
 				return nil, err
 			}
 
-			// TODO(JPOEHLS): Do we need to escape any specific characters in the body or wrap long lines?
-			_, err = fmt.Fprint(partw, m.Body)
+			bodyBytes := []byte(m.Body)
+			encoder := qprintable.NewEncoder(qprintable.DetectEncoding(m.Body), partw)
+			_, err = encoder.Write(bodyBytes)
 			if err != nil {
 				return nil, err
 			}
@@ -168,15 +172,16 @@ func (m *Message) Build() ([]byte, error) {
 		if m.HTMLBody != "" {
 			header = textproto.MIMEHeader{}
 			header.Add("Content-Type", "text/html; charset=UTF8")
-			// TODO(JPOEHLS): Do we need a Content-Transfer-Encoding: quoted-printable header? What does that mean?
+			header.Add("Content-Transfer-Encoding", "quoted-printable")
 
 			partw, err := altw.CreatePart(header)
 			if err != nil {
 				return nil, err
 			}
 
-			// TODO(JPOEHLS): Do we need to escape any specific characters in the body or wrap long lines?
-			_, err = fmt.Fprint(partw, m.HTMLBody)
+			htmlBodyBytes := []byte(m.HTMLBody)
+			encoder := qprintable.NewEncoder(qprintable.DetectEncoding(m.HTMLBody), partw)
+			_, err = encoder.Write(htmlBodyBytes)
 			if err != nil {
 				return nil, err
 			}
@@ -204,7 +209,7 @@ func writeHeader(w io.Writer, key, value string) error {
 	value = headerNewlineToSpace.Replace(value)
 	value = textproto.TrimString(value)
 
-	_, err := fmt.Fprintf(w, "%s: %s%s", value, crlf, crlf)
+	_, err := fmt.Fprintf(w, "%s: %s%s", key, value, crlf)
 	return err
 }
 
@@ -217,4 +222,54 @@ func write(w io.Writer, data ...string) error {
 		}
 	}
 	return nil
+}
+
+// SendMessage connects to the server at addr, switches to TLS if possible,
+// authenticates with mechanism a if possible, and then sends an email from
+// address from, to addresses to, with message msg.
+func SendMessage(addr string, a smtp.Auth, msg *Message) error {
+
+	// TODO(JPOEHLS): Make this work. Add support for RCPT BCC and RCPT CC commands. GAH!
+	return nil
+
+	/*	c, err := smtp.Dial(addr)
+		if err != nil {
+			return err
+		}
+		if err := c.hello(); err != nil {
+			return err
+		}
+		if ok, _ := c.Extension("STARTTLS"); ok {
+			if err = c.StartTLS(nil); err != nil {
+				return err
+			}
+		}
+		if a != nil && c.ext != nil {
+			if _, ok := c.ext["AUTH"]; ok {
+				if err = c.Auth(a); err != nil {
+					return err
+				}
+			}
+		}
+		if err = c.Mail(from); err != nil {
+			return err
+		}
+		for _, addr := range to {
+			if err = c.Rcpt(addr); err != nil {
+				return err
+			}
+		}
+		w, err := c.Data()
+		if err != nil {
+			return err
+		}
+		_, err = w.Write(msg.Bytes())
+		if err != nil {
+			return err
+		}
+		err = w.Close()
+		if err != nil {
+			return err
+		}
+		return c.Quit()*/
 }
