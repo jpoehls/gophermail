@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-// TODO(JPOEHLS): Figure out how we should encode header values (Q encoding?)
+// TODO(JPOEHLS): Figure out how we should encode header values. https://gist.github.com/andelf/5004821
 // TODO(JPOEHLS): Refactor writeHeader() to accept a textproto.MIMEHeader
 // TODO(JPOEHLS): Add support for attachments
 
@@ -148,6 +148,9 @@ func (m *Message) Bytes() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		// TODO(JPOEHLS): Play with using base64 (split into 76 character lines) instead of quoted-printable. Benefit being removal of a non-core dependency, downside being a non-human readable mail encoding.
+		//                https://gist.github.com/andelf/5004821
 
 		if m.Body != "" {
 			header = textproto.MIMEHeader{}

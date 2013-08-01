@@ -4,22 +4,12 @@ import (
 	"net/smtp"
 )
 
-// cmd is a convenience function that sends a command and returns the response
-func cmd(c *smtp.Client, expectCode int, format string, args ...interface{}) (int, string, error) {
-	id, err := c.Text.Cmd(format, args...)
-	if err != nil {
-		return 0, "", err
-	}
-	c.Text.StartResponse(id)
-	defer c.Text.EndResponse(id)
-	code, msg, err := c.Text.ReadResponse(expectCode)
-	return code, msg, err
-}
-
-// SendMessage connects to the server at addr, switches to TLS if possible,
+// SendMail connects to the server at addr, switches to TLS if possible,
 // authenticates with mechanism a if possible, and then sends an email from
 // address from, to addresses to, with message msg.
-func SendMessage(addr string, a smtp.Auth, msg *Message) error {
+//
+// Based heavily on smtp.SendMail().
+func SendMail(addr string, a smtp.Auth, msg *Message) error {
 
 	msgBytes, err := msg.Bytes()
 	if err != nil {
