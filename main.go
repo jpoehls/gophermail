@@ -45,9 +45,7 @@ type Message struct {
 type Attachment struct {
 	// Name must be set to a valid file name.
 	Name string
-	Data []byte
-
-	// TODO(JPOEHLS): Does it make sense to support an io.Reader instead of (or in addition to?) []byte so that data can be streamed in to save memory?
+	Data io.Reader
 }
 
 // Gets the encoded message data bytes.
