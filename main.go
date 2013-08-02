@@ -24,7 +24,6 @@ import (
 const crlf = "\r\n"
 
 var ErrMissingRecipient = errors.New("No recipient specified. At one To, Cc, or Bcc recipient is required.")
-var ErrMissingBody = errors.New("No body specified.")
 var ErrMissingSender = errors.New("No sender specified.")
 
 // A Message represents an email message.
@@ -89,11 +88,6 @@ func (m *Message) Bytes() ([]byte, error) {
 			}
 			header.Add("Bcc", bccAddrs)
 		}
-	}
-
-	// Require Body or HTMLBody
-	if m.Body == "" && m.HTMLBody == "" {
-		return nil, ErrMissingBody
 	}
 
 	// Require Sender
