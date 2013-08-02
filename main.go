@@ -15,12 +15,12 @@ import (
 	"strings"
 )
 
+// Message Lint: http://tools.ietf.org/tools/msglint/
 // Refer to python's email module to ensure we are doing things right. http://pydoc.net/Python/email/6.0.0a1/
 
-// TODO(JPOEHLS): Find out if we need to split headers > 76 chars into multiple lines.
-// TODO(JPOEHLS): Play with using base64 (split into 76 character lines) instead of quoted-printable. Benefit being removal of a non-core dependency, downside being a non-human readable mail encoding.
-// TODO(JPOEHLS): Split base64 encoded attachments into lines of 76 chars
-// TODO(JPOEHLS): Gmail says there is an encoding problem with the email when I receive it.
+// TODO(JPOEHLS): Per RFC 2822, split header lines 78 chars max (excluding CRLF). http://pydoc.net/Python/email/6.0.0a1/email6.header/
+// TODO(JPOEHLS): Play with using base64 (split into 78 character lines) instead of quoted-printable. Benefit being removal of a non-core dependency, downside being a non-human readable mail encoding.
+// TODO(JPOEHLS): Split base64 encoded attachments into lines of 78 chars
 
 const crlf = "\r\n"
 
@@ -88,12 +88,22 @@ func (m *Message) Bytes() ([]byte, error) {
 	if m.Sender == "" {
 		return nil, ErrMissingSender
 	} else {
-		header.Add("From", m.Sender)
+		parsedAddy, err := mail.ParseAddress(m.Sender)
+		if err != nil {
+			return nil, err
+		}
+
+		header.Add("From", parsedAddy.String())
 	}
 
 	// Optional ReplyTo
 	if m.ReplyTo != "" {
-		header.Add("Reply-To", m.ReplyTo)
+		parsedAddy, err := mail.ParseAddress(m.ReplyTo)
+		if err != nil {
+			return nil, err
+		}
+
+		header.Add("Reply-To", parsedAddy.String())
 	}
 
 	// Optional Subject
@@ -263,7 +273,29 @@ func encodeRFC2047(input string) string {
 	return s[:len(s)-3]
 }
 
-// Converts a list of mail.Address objects into a comma-delimited string.
+// Converts an array of email addresses into an RFC 2047 encoded, comma delimited string.
 func getAddressListString(addresses []string) (string, error) {
-	return strings.Join(addresses, ","), nil
+	buffer := bytes.NewBuffer([]byte{})
+
+	for i, v := range addresses {
+		parsedAddy, err := mail.ParseAddress(v)
+		if err != nil {
+			return "", err
+		}
+
+		_, err = fmt.Fprint(buffer, parsedAddy.String())
+		if err != nil {
+			return "", err
+		}
+
+		// Separate multiple addresses with a comma.
+		if i < len(addresses)-1 {
+			_, err := fmt.Fprint(buffer, ",")
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+
+	return buffer.String(), nil
 }

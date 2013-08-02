@@ -1,6 +1,7 @@
 package gophermail
 
 import (
+	"net/mail"
 	"net/smtp"
 )
 
@@ -20,10 +21,6 @@ func SendMail(addr string, a smtp.Auth, msg *Message) error {
 		return err
 	}
 
-	// TODO(JPOEHLS): hello() is private and it looks like other things call Hello implicitly, do we really need this?
-	// if err := c.hello(); err != nil {
-	// 	return err
-	// }
 	if ok, _ := c.Extension("STARTTLS"); ok {
 		if err = c.StartTLS(nil); err != nil {
 			return err
@@ -36,24 +33,29 @@ func SendMail(addr string, a smtp.Auth, msg *Message) error {
 			}
 		}
 	}
-	if err = c.Mail(msg.Sender); err != nil {
+
+	// Sender
+	parsedAddr, err := parseAddress(msg.Sender)
+	if err != nil {
 		return err
 	}
-	for _, rcptAddr := range msg.To {
-		if err = c.Rcpt(rcptAddr); err != nil {
-			return err
-		}
+	if err = c.Mail(parsedAddr); err != nil {
+		return err
 	}
-	for _, rcptAddr := range msg.Cc {
-		if err = c.Rcpt(rcptAddr); err != nil {
-			return err
-		}
+
+	// To
+	err = rcpt(c, msg.To)
+	if err != nil {
+		return err
 	}
-	for _, rcptAddr := range msg.Bcc {
-		if err = c.Rcpt(rcptAddr); err != nil {
-			return err
-		}
+
+	// CC
+	err = rcpt(c, msg.Cc)
+	if err != nil {
+		return err
 	}
+
+	// BCC
 	w, err := c.Data()
 	if err != nil {
 		return err
@@ -67,4 +69,32 @@ func SendMail(addr string, a smtp.Auth, msg *Message) error {
 		return err
 	}
 	return c.Quit()
+}
+
+// rcpt parses the specified list of RFC 5322 addresses
+// and calls smtp.Client.Rcpt() with each one.
+func rcpt(c *smtp.Client, addresses []string) error {
+	for _, rcptAddr := range addresses {
+		parsedAddr, err := parseAddress(rcptAddr)
+		if err != nil {
+			return err
+		}
+
+		if err = c.Rcpt(parsedAddr); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// parseAddress parses a single RFC 5322 address and returns the
+// e-mail address portion.
+// e.g. "Barry Gibbs <bg@example.com>" would return "bg@example.com".
+func parseAddress(address string) (string, error) {
+	a, err := mail.ParseAddress(address)
+	if err != nil {
+		return "", err
+	}
+	return a.Address, err
 }
