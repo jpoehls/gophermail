@@ -15,6 +15,8 @@ import (
 	"strings"
 )
 
+// Refer to python's email module to ensure we are doing things right. http://pydoc.net/Python/email/6.0.0a1/
+
 // TODO(JPOEHLS): Find out if we need to split headers > 76 chars into multiple lines.
 // TODO(JPOEHLS): Play with using base64 (split into 76 character lines) instead of quoted-printable. Benefit being removal of a non-core dependency, downside being a non-human readable mail encoding.
 // TODO(JPOEHLS): Split base64 encoded attachments into lines of 76 chars
