@@ -40,18 +40,18 @@ func SendMail(addr string, a smtp.Auth, msg *Message) error {
 	if err = c.Mail(msg.Sender); err != nil {
 		return err
 	}
-	for _, addr := range msg.To {
-		if err = c.Rcpt(addr); err != nil {
+	for _, rcptAddr := range msg.To {
+		if err = c.Rcpt(rcptAddr); err != nil {
 			return err
 		}
 	}
-	for _, addr = range msg.Cc {
-		if err = c.Rcpt(addr); err != nil {
+	for _, rcptAddr := range msg.Cc {
+		if err = c.Rcpt(rcptAddr); err != nil {
 			return err
 		}
 	}
-	for _, addr = range msg.Bcc {
-		if err = c.Rcpt(addr); err != nil {
+	for _, rcptAddr := range msg.Bcc {
+		if err = c.Rcpt(rcptAddr); err != nil {
 			return err
 		}
 	}

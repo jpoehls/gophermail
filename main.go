@@ -2,18 +2,24 @@ package gophermail
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/sloonz/go-qprintable"
 	"io"
+	"mime"
 	"mime/multipart"
+	"net/mail"
 	"net/textproto"
+	"path/filepath"
 	"strings"
 )
 
-// TODO(JPOEHLS): Figure out how we should encode header values. https://gist.github.com/andelf/5004821
-// TODO(JPOEHLS): Refactor writeHeader() to accept a textproto.MIMEHeader
-// TODO(JPOEHLS): Add support for attachments
+// TODO(JPOEHLS): Find out if we need to split headers > 76 chars into multiple lines.
+// TODO(JPOEHLS): Play with using base64 (split into 76 character lines) instead of quoted-printable. Benefit being removal of a non-core dependency, downside being a non-human readable mail encoding.
+// TODO(JPOEHLS): Split base64 encoded attachments into lines of 76 chars
+// TODO(JPOEHLS): Fix CC and BCC recipients - they are shown publically in the message and shouldn't be...
+// TODO(JPOEHLS): Gmail says there is an encoding problem with the email when I receive it.
 
 const crlf = "\r\n"
 
@@ -32,9 +38,8 @@ type Message struct {
 
 	Subject string // optional
 
-	// At least one of Body or HTMLBody must be non-empty.
-	Body     string
-	HTMLBody string
+	Body     string // optional
+	HTMLBody string // optional
 
 	Attachments []Attachment // optional
 
@@ -44,13 +49,16 @@ type Message struct {
 // An Attachment represents an email attachment.
 type Attachment struct {
 	// Name must be set to a valid file name.
-	Name string
-	Data io.Reader
+	Name        string
+	ContentType string // optional
+	Data        io.Reader
 }
 
 // Gets the encoded message data bytes.
 func (m *Message) Bytes() ([]byte, error) {
 	var buffer = &bytes.Buffer{}
+
+	header := textproto.MIMEHeader{}
 
 	// Require To, Cc, or Bcc
 	var hasTo = m.To != nil && len(m.To) > 0
@@ -61,27 +69,29 @@ func (m *Message) Bytes() ([]byte, error) {
 		return nil, ErrMissingRecipient
 	} else {
 		if hasTo {
-			err := writeHeader(buffer, "To", strings.Join(m.To, ","))
+			toAddrs, err := getAddressListString(m.To)
 			if err != nil {
 				return nil, err
 			}
+			header.Add("To", toAddrs)
 		}
 		if hasCc {
-			err := writeHeader(buffer, "Cc", strings.Join(m.Cc, ","))
+			ccAddrs, err := getAddressListString(m.Cc)
 			if err != nil {
 				return nil, err
 			}
+			header.Add("Cc", ccAddrs)
 		}
 		if hasBcc {
-			err := writeHeader(buffer, "Bcc", strings.Join(m.Bcc, ","))
+			bccAddrs, err := getAddressListString(m.Bcc)
 			if err != nil {
 				return nil, err
 			}
+			header.Add("Bcc", bccAddrs)
 		}
 	}
 
 	// Require Body or HTMLBody
-	// TODO(JPOEHLS): Is a body is technically required by MIME? If not, we shouldn't require it either.
 	if m.Body == "" && m.HTMLBody == "" {
 		return nil, ErrMissingBody
 	}
@@ -90,65 +100,50 @@ func (m *Message) Bytes() ([]byte, error) {
 	if m.Sender == "" {
 		return nil, ErrMissingSender
 	} else {
-		err := writeHeader(buffer, "From", m.Sender)
-		if err != nil {
-			return nil, err
-		}
+		header.Add("From", m.Sender)
 	}
 
 	// Optional ReplyTo
 	if m.ReplyTo != "" {
-		err := writeHeader(buffer, "Reply-To", m.ReplyTo)
-		if err != nil {
-			return nil, err
-		}
+		header.Add("Reply-To", m.ReplyTo)
 	}
 
 	// Optional Subject
 	if m.Subject != "" {
-		err := writeHeader(buffer, "Subject", m.Subject)
-		if err != nil {
-			return nil, err
-		}
+		header.Add("Subject", encodeRFC2047(m.Subject))
 	}
 
+	// Top level multipart writer for our `multipart/mixed` body.
 	mixedw := multipart.NewWriter(buffer)
 
 	var err error
 
-	err = writeHeader(buffer, "MIME-Version", "1.0")
-	if err != nil {
-		return nil, err
-	}
-	err = writeHeader(buffer, "Content-Type", fmt.Sprintf("multipart/mixed; boundary=%s", mixedw.Boundary()))
-	if err != nil {
-		return nil, err
-	}
+	header.Add("MIME-Version", "1.0")
+	header.Add("Content-Type", fmt.Sprintf("multipart/mixed; boundary=%s", mixedw.Boundary()))
 
-	// Add a spacer between our header and the first part.
-	_, err = fmt.Fprint(buffer, crlf)
+	err = writeHeader(buffer, header)
 	if err != nil {
 		return nil, err
 	}
 
-	var header textproto.MIMEHeader
+	// Write the start of our `multipart/mixed` body.
+	_, err = fmt.Fprintf(buffer, "--%s%s", mixedw.Boundary(), crlf)
+	if err != nil {
+		return nil, err
+	}
 
+	// Does the message have a body?
 	if m.Body != "" || m.HTMLBody != "" {
 
+		// Nested multipart writer for our `multipart/alternative` body.
 		altw := multipart.NewWriter(buffer)
-		err := writeHeader(buffer, "Content-Type", fmt.Sprintf("multipart/alternative; boundary=%s", altw.Boundary()))
+
+		header = textproto.MIMEHeader{}
+		header.Add("Content-Type", fmt.Sprintf("multipart/alternative; boundary=%s", altw.Boundary()))
+		err := writeHeader(buffer, header)
 		if err != nil {
 			return nil, err
 		}
-
-		// Add a spacer between our header and the first part.
-		_, err = fmt.Fprint(buffer, crlf)
-		if err != nil {
-			return nil, err
-		}
-
-		// TODO(JPOEHLS): Play with using base64 (split into 76 character lines) instead of quoted-printable. Benefit being removal of a non-core dependency, downside being a non-human readable mail encoding.
-		//                https://gist.github.com/andelf/5004821
 
 		if m.Body != "" {
 			header = textproto.MIMEHeader{}
@@ -190,7 +185,38 @@ func (m *Message) Bytes() ([]byte, error) {
 	}
 
 	if m.Attachments != nil && len(m.Attachments) > 0 {
-		// TODO(JPOEHLS): Write the attachment parts.
+
+		for _, attachment := range m.Attachments {
+
+			contentType := attachment.ContentType
+			if contentType == "" {
+				contentType = mime.TypeByExtension(filepath.Ext(attachment.Name))
+				if contentType == "" {
+					contentType = "application/octet-stream"
+				}
+			}
+
+			header := textproto.MIMEHeader{}
+			header.Add("Content-Type", contentType)
+			header.Add("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, attachment.Name))
+			header.Add("Content-Transfer-Encoding", "base64")
+
+			attachmentPart, err := mixedw.CreatePart(header)
+			if err != nil {
+				return nil, err
+			}
+
+			encoder := base64.NewEncoder(base64.StdEncoding, attachmentPart)
+			_, err = io.Copy(encoder, attachment.Data)
+			if err != nil {
+				return nil, err
+			}
+			err = encoder.Close()
+			if err != nil {
+				return nil, err
+			}
+		}
+
 	}
 
 	mixedw.Close()
@@ -200,25 +226,56 @@ func (m *Message) Bytes() ([]byte, error) {
 
 var headerNewlineToSpace = strings.NewReplacer("\n", " ", "\r", " ")
 
-func writeHeader(w io.Writer, key, value string) error {
-	// TODO(JPOEHLS): Do we need to worry about escaping certain characters in the value or wrapping long values to multiple lines? For example a really long recipient list.
+func writeHeader(w io.Writer, header textproto.MIMEHeader) error {
+	for k, vs := range header {
+		_, err := fmt.Fprintf(w, "%s: ", k)
+		if err != nil {
+			return err
+		}
 
-	// Clean key and value like http.Header.Write() does.
-	key = textproto.CanonicalMIMEHeaderKey(key)
-	value = headerNewlineToSpace.Replace(value)
-	value = textproto.TrimString(value)
+		for i, v := range vs {
+			// Clean the value like http.Header.Write() does.
+			v = headerNewlineToSpace.Replace(v)
+			v = textproto.TrimString(v)
 
-	_, err := fmt.Fprintf(w, "%s: %s%s", key, value, crlf)
-	return err
-}
+			_, err := fmt.Fprintf(w, "%s", v)
+			if err != nil {
+				return err
+			}
 
-// Helper method to make writing to an io.Writer over and over nicer.
-func write(w io.Writer, data ...string) error {
-	for _, part := range data {
-		_, err := w.Write([]byte(part))
+			// Separate multiple header values with a semicolon.
+			if i < len(vs)-1 {
+				_, err := fmt.Fprintf(w, "; ", v)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		_, err = fmt.Fprint(w, crlf)
 		if err != nil {
 			return err
 		}
 	}
+
+	// Write a blank line as a spacer
+	_, err := fmt.Fprint(w, crlf)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+// Inspired by https://gist.github.com/andelf/5004821
+func encodeRFC2047(input string) string {
+	// use mail's rfc2047 to encode any string
+	addr := mail.Address{input, ""}
+	s := addr.String()
+	return s[:len(s)-3]
+}
+
+// Converts a list of mail.Address objects into a comma-delimited string.
+func getAddressListString(addresses []string) (string, error) {
+	return strings.Join(addresses, ","), nil
 }
