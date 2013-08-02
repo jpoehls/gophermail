@@ -18,7 +18,6 @@ import (
 // TODO(JPOEHLS): Find out if we need to split headers > 76 chars into multiple lines.
 // TODO(JPOEHLS): Play with using base64 (split into 76 character lines) instead of quoted-printable. Benefit being removal of a non-core dependency, downside being a non-human readable mail encoding.
 // TODO(JPOEHLS): Split base64 encoded attachments into lines of 76 chars
-// TODO(JPOEHLS): Fix CC and BCC recipients - they are shown publically in the message and shouldn't be...
 // TODO(JPOEHLS): Gmail says there is an encoding problem with the email when I receive it.
 
 const crlf = "\r\n"
@@ -80,13 +79,6 @@ func (m *Message) Bytes() ([]byte, error) {
 				return nil, err
 			}
 			header.Add("Cc", ccAddrs)
-		}
-		if hasBcc {
-			bccAddrs, err := getAddressListString(m.Bcc)
-			if err != nil {
-				return nil, err
-			}
-			header.Add("Bcc", bccAddrs)
 		}
 	}
 
