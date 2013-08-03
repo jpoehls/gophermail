@@ -18,7 +18,8 @@ import (
 // Refer to python's email module to ensure we are doing things right. http://pydoc.net/Python/email/6.0.0a1/
 
 // TODO(JPOEHLS): Per RFC 2822, split header lines 78 chars max (excluding CRLF). http://pydoc.net/Python/email/6.0.0a1/email6.header/
-// TODO(JPOEHLS): Split base64 encoded attachments into lines of 78 chars
+
+// Per RFC 2822 s2.2.3, header lines can be folded by inserting a CRLF before any whitespace.
 
 const crlf = "\r\n"
 
@@ -113,6 +114,10 @@ func (m *Message) Bytes() ([]byte, error) {
 	mixedw := multipart.NewWriter(buffer)
 
 	var err error
+	err = mixedw.SetBoundary("_frontier")
+	if err != nil {
+		return nil, err
+	}
 
 	header.Add("MIME-Version", "1.0")
 	header.Add("Content-Type", fmt.Sprintf("multipart/mixed; boundary=%s", mixedw.Boundary()))
@@ -133,6 +138,10 @@ func (m *Message) Bytes() ([]byte, error) {
 
 		// Nested multipart writer for our `multipart/alternative` body.
 		altw := multipart.NewWriter(buffer)
+		err = altw.SetBoundary("_newfrontier")
+		if err != nil {
+			return nil, err
+		}
 
 		header = textproto.MIMEHeader{}
 		header.Add("Content-Type", fmt.Sprintf("multipart/alternative; boundary=%s", altw.Boundary()))
@@ -143,7 +152,7 @@ func (m *Message) Bytes() ([]byte, error) {
 
 		if m.Body != "" {
 			header = textproto.MIMEHeader{}
-			header.Add("Content-Type", "text/plain; charset=UTF8")
+			header.Add("Content-Type", "text/plain; charset=utf-8")
 			//header.Add("Content-Transfer-Encoding", "quoted-printable")
 			header.Add("Content-Transfer-Encoding", "base64")
 
@@ -167,7 +176,7 @@ func (m *Message) Bytes() ([]byte, error) {
 
 		if m.HTMLBody != "" {
 			header = textproto.MIMEHeader{}
-			header.Add("Content-Type", "text/html; charset=UTF8")
+			header.Add("Content-Type", "text/html; charset=utf-8")
 			//header.Add("Content-Transfer-Encoding", "quoted-printable")
 			header.Add("Content-Transfer-Encoding", "base64")
 
@@ -242,8 +251,7 @@ func writeHeader(w io.Writer, header textproto.MIMEHeader) error {
 		}
 
 		for i, v := range vs {
-			// Clean the value like http.Header.Write() does.
-			v = headerNewlineToSpace.Replace(v)
+			//v = headerNewlineToSpace.Replace(v)
 			v = textproto.TrimString(v)
 
 			_, err := fmt.Fprintf(w, "%s", v)
@@ -300,7 +308,7 @@ func getAddressListString(addresses []string) (string, error) {
 
 		// Separate multiple addresses with a comma.
 		if i < len(addresses)-1 {
-			_, err := fmt.Fprint(buffer, ",")
+			_, err := fmt.Fprint(buffer, ","+crlf+" ")
 			if err != nil {
 				return "", err
 			}

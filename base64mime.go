@@ -10,7 +10,7 @@ import (
 var delimiter = []byte("\r\n") // CRLF
 
 // Per RFC 2822, lines should be no longer than 78 characters excluding the CRLF.
-const maxLength = 78
+const maxLength = 76
 
 // TODO(JPOEHLS): Implement base64 encoding per RFCs 2045-2047.
 //                http://pydoc.net/Python/email/6.0.0a1/email6.base64mime/
