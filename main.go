@@ -114,13 +114,9 @@ func (m *Message) Bytes() ([]byte, error) {
 	mixedw := multipart.NewWriter(buffer)
 
 	var err error
-	err = mixedw.SetBoundary("_frontier")
-	if err != nil {
-		return nil, err
-	}
 
 	header.Add("MIME-Version", "1.0")
-	header.Add("Content-Type", fmt.Sprintf("multipart/mixed; boundary=%s", mixedw.Boundary()))
+	header.Add("Content-Type", fmt.Sprintf("multipart/mixed;%s boundary=%s", crlf, mixedw.Boundary()))
 
 	err = writeHeader(buffer, header)
 	if err != nil {
@@ -138,13 +134,9 @@ func (m *Message) Bytes() ([]byte, error) {
 
 		// Nested multipart writer for our `multipart/alternative` body.
 		altw := multipart.NewWriter(buffer)
-		err = altw.SetBoundary("_newfrontier")
-		if err != nil {
-			return nil, err
-		}
 
 		header = textproto.MIMEHeader{}
-		header.Add("Content-Type", fmt.Sprintf("multipart/alternative; boundary=%s", altw.Boundary()))
+		header.Add("Content-Type", fmt.Sprintf("multipart/alternative;%s boundary=%s", crlf, altw.Boundary()))
 		err := writeHeader(buffer, header)
 		if err != nil {
 			return nil, err
