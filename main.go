@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/sloonz/go-qprintable"
+	//"github.com/sloonz/go-qprintable"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -146,7 +146,8 @@ func (m *Message) Bytes() ([]byte, error) {
 		if m.Body != "" {
 			header = textproto.MIMEHeader{}
 			header.Add("Content-Type", "text/plain; charset=UTF8")
-			header.Add("Content-Transfer-Encoding", "quoted-printable")
+			//header.Add("Content-Transfer-Encoding", "quoted-printable")
+			header.Add("Content-Transfer-Encoding", "base64")
 
 			partw, err := altw.CreatePart(header)
 			if err != nil {
@@ -154,8 +155,13 @@ func (m *Message) Bytes() ([]byte, error) {
 			}
 
 			bodyBytes := []byte(m.Body)
-			encoder := qprintable.NewEncoder(qprintable.DetectEncoding(m.Body), partw)
+			encoder := NewBase64MimeEncoder(partw)
+			//encoder := qprintable.NewEncoder(qprintable.DetectEncoding(m.Body), partw)
 			_, err = encoder.Write(bodyBytes)
+			if err != nil {
+				return nil, err
+			}
+			err = encoder.Close()
 			if err != nil {
 				return nil, err
 			}
@@ -164,7 +170,8 @@ func (m *Message) Bytes() ([]byte, error) {
 		if m.HTMLBody != "" {
 			header = textproto.MIMEHeader{}
 			header.Add("Content-Type", "text/html; charset=UTF8")
-			header.Add("Content-Transfer-Encoding", "quoted-printable")
+			//header.Add("Content-Transfer-Encoding", "quoted-printable")
+			header.Add("Content-Transfer-Encoding", "base64")
 
 			partw, err := altw.CreatePart(header)
 			if err != nil {
@@ -172,8 +179,13 @@ func (m *Message) Bytes() ([]byte, error) {
 			}
 
 			htmlBodyBytes := []byte(m.HTMLBody)
-			encoder := qprintable.NewEncoder(qprintable.DetectEncoding(m.HTMLBody), partw)
+			encoder := NewBase64MimeEncoder(partw)
+			//encoder := qprintable.NewEncoder(qprintable.DetectEncoding(m.HTMLBody), partw)
 			_, err = encoder.Write(htmlBodyBytes)
+			if err != nil {
+				return nil, err
+			}
+			err = encoder.Close()
 			if err != nil {
 				return nil, err
 			}

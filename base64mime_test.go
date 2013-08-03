@@ -24,7 +24,7 @@ func TestBase64MimeEncoder(t *testing.T) {
 	output := dest.String()
 	t.Log(output)
 
-	if output != "SGVsbG8g\r\nV29ybGQh" {
+	if output != "SGVsbG8gV29ybGQh" {
 		t.Fail()
 	}
 }

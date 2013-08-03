@@ -8,15 +8,17 @@ import (
 )
 
 var delimiter = []byte("\r\n") // CRLF
-const maxLength = 8            // 76
+
+// Per RFC 2822, lines should be no longer than 78 characters excluding the CRLF.
+const maxLength = 78
 
 // TODO(JPOEHLS): Implement base64 encoding per RFCs 2045-2047.
 //                http://pydoc.net/Python/email/6.0.0a1/email6.base64mime/
 //                https://github.com/AeroNotix/libsmtp/blob/master/smtp.go
 
-// splittingWriter is an io.WriteCloser that breaks up
-// the written data into chunks of the given size
-// separated by the specified delimiter.
+// splittingWriter is an io.WriteCloser that delimits
+// the written data into fixed length chunks using
+// a separator character sequence.
 type splittingWriter struct {
 	b       *bytes.Buffer
 	w       io.Writer
@@ -51,6 +53,8 @@ func (t *splittingWriter) Write(p []byte) (n int, err error) {
 }
 
 func (t *splittingWriter) Close() (err error) {
+	//log.Printf("Closing with buffer length: %v", t.b.Len())
+
 	// Flush everything in the buffer.
 	if t.b.Len() > 0 {
 		// If this isn't the first time flushing
@@ -82,9 +86,14 @@ func (t *base64MimeEncoder) Write(p []byte) (n int, err error) {
 	return
 }
 
-func (t *base64MimeEncoder) Close() error {
-	err := t.enc.Close()
-	return err
+func (t *base64MimeEncoder) Close() (err error) {
+	err = t.enc.Close()
+	if err != nil {
+		return err
+	}
+
+	err = t.w.Close()
+	return
 }
 
 // "some string" -> base64 -> splitter -> output
