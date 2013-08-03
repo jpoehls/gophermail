@@ -2,7 +2,6 @@ package gophermail
 
 import (
 	"bytes"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	//"github.com/sloonz/go-qprintable"
@@ -19,7 +18,6 @@ import (
 // Refer to python's email module to ensure we are doing things right. http://pydoc.net/Python/email/6.0.0a1/
 
 // TODO(JPOEHLS): Per RFC 2822, split header lines 78 chars max (excluding CRLF). http://pydoc.net/Python/email/6.0.0a1/email6.header/
-// TODO(JPOEHLS): Play with using base64 (split into 78 character lines) instead of quoted-printable. Benefit being removal of a non-core dependency, downside being a non-human readable mail encoding.
 // TODO(JPOEHLS): Split base64 encoded attachments into lines of 78 chars
 
 const crlf = "\r\n"
@@ -216,7 +214,7 @@ func (m *Message) Bytes() ([]byte, error) {
 				return nil, err
 			}
 
-			encoder := base64.NewEncoder(base64.StdEncoding, attachmentPart)
+			encoder := NewBase64MimeEncoder(attachmentPart)
 			_, err = io.Copy(encoder, attachment.Data)
 			if err != nil {
 				return nil, err
