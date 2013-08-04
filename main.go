@@ -11,7 +11,6 @@ import (
 	"net/mail"
 	"net/textproto"
 	"path/filepath"
-	"strings"
 )
 
 // Message Lint: http://tools.ietf.org/tools/msglint/
@@ -24,12 +23,17 @@ import (
 const crlf = "\r\n"
 
 var ErrMissingRecipient = errors.New("No recipient specified. At one To, Cc, or Bcc recipient is required.")
-var ErrMissingSender = errors.New("No sender specified.")
+var ErrMissingFromAddress = errors.New("No from address specified.")
 
 // A Message represents an email message.
-// Addresses may be of any form permitted by RFC 822.
+// Addresses may be of any form permitted by RFC 5322.
 type Message struct {
-	Sender  string
+	// TODO(JPOEHLS): Add support for specifying the Sender header.
+
+	// Technically this could be a list of addresses but we don't support that. See RFC 2822 s3.6.2.
+	From string
+
+	// Technically this could be a list of addresses but we don't support that. See RFC 2822 s3.6.2.
 	ReplyTo string // optional
 
 	// At least one of these slices must have a non-zero length.
@@ -53,7 +57,7 @@ type Attachment struct {
 	Data        io.Reader
 }
 
-// Gets the encoded message data bytes.
+// Bytes ges the encoded MIME message.
 func (m *Message) Bytes() ([]byte, error) {
 	var buffer = &bytes.Buffer{}
 
@@ -83,11 +87,11 @@ func (m *Message) Bytes() ([]byte, error) {
 		}
 	}
 
-	// Require Sender
-	if m.Sender == "" {
-		return nil, ErrMissingSender
+	// Require From address
+	if m.From == "" {
+		return nil, ErrMissingFromAddress
 	} else {
-		parsedAddy, err := mail.ParseAddress(m.Sender)
+		parsedAddy, err := mail.ParseAddress(m.From)
 		if err != nil {
 			return nil, err
 		}
@@ -233,8 +237,9 @@ func (m *Message) Bytes() ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-var headerNewlineToSpace = strings.NewReplacer("\n", " ", "\r", " ")
-
+// writeHeader writes the specified MIMEHeader to the io.Writer.
+// Header values will be trimmed but otherwise left alone.
+// Headers with multiple values are not supported and will return an error.
 func writeHeader(w io.Writer, header textproto.MIMEHeader) error {
 	for k, vs := range header {
 		_, err := fmt.Fprintf(w, "%s: ", k)
@@ -243,7 +248,6 @@ func writeHeader(w io.Writer, header textproto.MIMEHeader) error {
 		}
 
 		for i, v := range vs {
-			//v = headerNewlineToSpace.Replace(v)
 			v = textproto.TrimString(v)
 
 			_, err := fmt.Fprintf(w, "%s", v)
@@ -251,12 +255,8 @@ func writeHeader(w io.Writer, header textproto.MIMEHeader) error {
 				return err
 			}
 
-			// Separate multiple header values with a semicolon.
 			if i < len(vs)-1 {
-				_, err := fmt.Fprintf(w, "; ", v)
-				if err != nil {
-					return err
-				}
+				return errors.New("Multiple header values are not supported.")
 			}
 		}
 
@@ -275,6 +275,7 @@ func writeHeader(w io.Writer, header textproto.MIMEHeader) error {
 	return nil
 }
 
+// qEncode encodes a string with Q encoding defined as an 'encoded-word' in RFC 2047.
 // Inspired by https://gist.github.com/andelf/5004821
 func encodeRFC2047(input string) string {
 	// use mail's rfc2047 to encode any string
@@ -283,7 +284,10 @@ func encodeRFC2047(input string) string {
 	return s[:len(s)-3]
 }
 
-// Converts an array of email addresses into an RFC 2047 encoded, comma delimited string.
+// getAddressListString encodes a slice of email addresses into
+// a string value suitable for a MIME header. Each address is
+// Q encoded and wrapped onto its own line to help ensure that
+// the header line doesn't cross the 78 character maximum.
 func getAddressListString(addresses []string) (string, error) {
 	buffer := bytes.NewBuffer([]byte{})
 
@@ -298,7 +302,8 @@ func getAddressListString(addresses []string) (string, error) {
 			return "", err
 		}
 
-		// Separate multiple addresses with a comma.
+		// Separate multiple addresses with a comma
+		// and wrap them to their own line using whitespace folding.
 		if i < len(addresses)-1 {
 			_, err := fmt.Fprint(buffer, ","+crlf+" ")
 			if err != nil {

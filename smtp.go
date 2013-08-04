@@ -35,7 +35,7 @@ func SendMail(addr string, a smtp.Auth, msg *Message) error {
 	}
 
 	// Sender
-	parsedAddr, err := parseAddress(msg.Sender)
+	parsedAddr, err := parseAddress(msg.From)
 	if err != nil {
 		return err
 	}
