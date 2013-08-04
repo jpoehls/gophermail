@@ -56,6 +56,11 @@ func SendMail(addr string, a smtp.Auth, msg *Message) error {
 	}
 
 	// BCC
+	err = rcpt(c, msg.Bcc)
+	if err != nil {
+		return err
+	}
+
 	w, err := c.Data()
 	if err != nil {
 		return err
