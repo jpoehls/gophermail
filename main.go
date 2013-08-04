@@ -14,11 +14,8 @@ import (
 )
 
 // Message Lint: http://tools.ietf.org/tools/msglint/
-// Refer to python's email module to ensure we are doing things right. http://pydoc.net/Python/email/6.0.0a1/
 
 // TODO(JPOEHLS): Per RFC 2822, split header lines 78 chars max (excluding CRLF). http://pydoc.net/Python/email/6.0.0a1/email6.header/
-
-// Per RFC 2822 s2.2.3, header lines can be folded by inserting a CRLF before any whitespace.
 
 const crlf = "\r\n"
 
@@ -52,9 +49,14 @@ type Message struct {
 // An Attachment represents an email attachment.
 type Attachment struct {
 	// Name must be set to a valid file name.
-	Name        string
-	ContentType string // optional
-	Data        io.Reader
+	Name string
+
+	// Optional.
+	// Uses mime.TypeByExtension and falls back
+	// to application/octet-stream if unknown.
+	ContentType string
+
+	Data io.Reader
 }
 
 // Bytes ges the encoded MIME message.
@@ -111,7 +113,7 @@ func (m *Message) Bytes() ([]byte, error) {
 
 	// Optional Subject
 	if m.Subject != "" {
-		header.Add("Subject", encodeRFC2047(m.Subject))
+		header.Add("Subject", qEncodeAndWrap(m.Subject, 9 /* len("Subject: ") */))
 	}
 
 	// Top level multipart writer for our `multipart/mixed` body.
@@ -211,7 +213,7 @@ func (m *Message) Bytes() ([]byte, error) {
 
 			header := textproto.MIMEHeader{}
 			header.Add("Content-Type", contentType)
-			header.Add("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, attachment.Name))
+			header.Add("Content-Disposition", fmt.Sprintf(`attachment;%s filename="%s"`, crlf, attachment.Name))
 			header.Add("Content-Transfer-Encoding", "base64")
 
 			attachmentPart, err := mixedw.CreatePart(header)
@@ -276,12 +278,42 @@ func writeHeader(w io.Writer, header textproto.MIMEHeader) error {
 }
 
 // qEncode encodes a string with Q encoding defined as an 'encoded-word' in RFC 2047.
+// The maximum encoded word length of 75 characters is not accounted for.
+// Use qEncodeAndWrap if you need that.
+//
 // Inspired by https://gist.github.com/andelf/5004821
-func encodeRFC2047(input string) string {
+func qEncode(input string) string {
 	// use mail's rfc2047 to encode any string
 	addr := mail.Address{input, ""}
 	s := addr.String()
 	return s[:len(s)-3]
+}
+
+// qEncodeAndWrap encodes the input as potentially multiple 'encoded-words'
+// with CRLF SPACE line breaks between them to (as best as possible)
+// guarantee that each encoded-word is no more than 75 characters
+// and, padding included, each line is no longer than 76 characters.
+// See RFC 2047 s2.
+func qEncodeAndWrap(input string, padding int) string {
+
+	// Increase the padding to account for
+	// the encoded-word 'envelop' tokens.
+	// "?" charset (utf-8 is always assumed) "?" encoding "?" encoded-text "?="
+	padding += 11
+
+	// Tokenization included, the encoded word must not
+	// be longer than 75 characters.
+	const maxEncodedWordLength = 75
+
+	var firstTry = qEncode(input)
+	if len(firstTry) > maxEncodedWordLength-padding {
+
+		// TODO(JPOEHLS): Implement some algorithm here to break the input into multiple encoded-words.
+
+		return firstTry
+	} else {
+		return firstTry
+	}
 }
 
 // getAddressListString encodes a slice of email addresses into
@@ -302,8 +334,14 @@ func getAddressListString(addresses []string) (string, error) {
 			return "", err
 		}
 
+		// TODO(ANYONE): Currently we are splitting each address onto its own line
+		//               because this is the easiest way to ensure lines don't exceed
+		//               the max length. Ideally we wouldn't split until we actually
+		//               needed to.
+
 		// Separate multiple addresses with a comma
 		// and wrap them to their own line using whitespace folding.
+		// See RFC 2822 s2.2.3.
 		if i < len(addresses)-1 {
 			_, err := fmt.Fprint(buffer, ","+crlf+" ")
 			if err != nil {
