@@ -19,6 +19,8 @@ Known Issues:
 
 TODO:
 	- Use quoted-printable encoding for message bodies.
-	- Properly wrap `Subject: ` headers longer than 75 characters.
+	- Properly wrap `Subject:` headers longer than 75 characters.
+	- Add support for `Sender:` header.
+	- Add support for multiple `From:` and `Reply-To:` addresses.
 */
 package gophermail
