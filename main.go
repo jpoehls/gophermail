@@ -31,6 +31,7 @@ type Message struct {
 	// Technically this could be a list of addresses but we don't support that. See RFC 2822 s3.6.2.
 	ReplyTo string // optional
 
+	// TODO(JPOEHLS): Make these slices of mail.Address and add AddTo, AddCc, AddBcc funcs that take strings. (Inspired by gopostal's API, https://github.com/pcrawfor/gopostal)
 	// At least one of these slices must have a non-zero length.
 	To, Cc, Bcc []string
 
