@@ -57,7 +57,7 @@ type Attachment struct {
 	Data io.Reader
 }
 
-// Bytes ges the encoded MIME message.
+// Bytes gets the encoded MIME message.
 func (m *Message) Bytes() ([]byte, error) {
 	var buffer = &bytes.Buffer{}
 
