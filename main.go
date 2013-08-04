@@ -15,8 +15,6 @@ import (
 
 // Message Lint: http://tools.ietf.org/tools/msglint/
 
-// TODO(JPOEHLS): Per RFC 2822, split header lines 78 chars max (excluding CRLF). http://pydoc.net/Python/email/6.0.0a1/email6.header/
-
 const crlf = "\r\n"
 
 var ErrMissingRecipient = errors.New("No recipient specified. At one To, Cc, or Bcc recipient is required.")
@@ -308,7 +306,7 @@ func qEncodeAndWrap(input string, padding int) string {
 	var firstTry = qEncode(input)
 	if len(firstTry) > maxEncodedWordLength-padding {
 
-		// TODO(JPOEHLS): Implement some algorithm here to break the input into multiple encoded-words.
+		// TODO(JPOEHLS): Implement an algorithm to break the input into multiple encoded-words.
 
 		return firstTry
 	} else {
