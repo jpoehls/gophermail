@@ -9,8 +9,8 @@ Features:
 
 Notes:
 	- UTF-8 encoding is always assumed.
-	- Message bodies are base64 encoded instead of the more
-  	  readable quoted-printable encoding.
+	- Message bodies are base64 encoded instead of
+	  the more readable quoted-printable encoding.
 
 Known Issues:
 	- `Subject: ` headers longer than 75 characters are not
