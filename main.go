@@ -295,6 +295,11 @@ func qEncode(input string) string {
 // See RFC 2047 s2.
 func qEncodeAndWrap(input string, padding int) string {
 
+	// Split at any whitespace but prefer "; " or  ", " or " >" or "> " which
+	// denotes a clear semantic break.
+	// Remember that the qEncoded input isn't guaranteed to have the same
+	// length as the unencoded input (obvious). Example: http://play.golang.org/p/dXA5IJnL22
+
 	// Increase the padding to account for
 	// the encoded-word 'envelop' tokens.
 	// "?" charset (utf-8 is always assumed) "?" encoding "?" encoded-text "?="
