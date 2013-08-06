@@ -343,13 +343,13 @@ func getAddressListString(addresses []string) (string, error) {
 	buffer := bytes.NewBuffer([]byte{})
 
 	for i, v := range addresses {
-		parsedAddy, err := mail.ParseAddress(v)
-		if err != nil {
-			return "", err
-		}
-
 		// Ignore empty addresses
-		if parsedAddy.String() != "" {
+		if v != "" {
+			parsedAddy, err := mail.ParseAddress(v)
+			if err != nil {
+				return "", err
+			}
+
 			_, err = fmt.Fprint(buffer, parsedAddy.String())
 			if err != nil {
 				return "", err

@@ -79,14 +79,16 @@ func SendMail(addr string, a smtp.Auth, msg *Message) error {
 // rcpt parses the specified list of RFC 5322 addresses
 // and calls smtp.Client.Rcpt() with each one.
 func rcpt(c *smtp.Client, addresses []string) error {
+
 	if addresses != nil && len(addresses) > 0 {
 		for _, rcptAddr := range addresses {
-			parsedAddr, err := parseAddress(rcptAddr)
-			if err != nil {
-				return err
-			}
+			// Ignore empty addresses
+			if rcptAddr != "" {
+				parsedAddr, err := parseAddress(rcptAddr)
+				if err != nil {
+					return err
+				}
 
-			if parsedAddr != "" {
 				if err = c.Rcpt(parsedAddr); err != nil {
 					return err
 				}
