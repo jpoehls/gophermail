@@ -64,28 +64,40 @@ func (m *Message) Bytes() ([]byte, error) {
 
 	header := textproto.MIMEHeader{}
 
+	var err error
+
 	// Require To, Cc, or Bcc
-	var hasTo = m.To != nil && len(m.To) > 0
-	var hasCc = m.Cc != nil && len(m.Cc) > 0
-	var hasBcc = m.Bcc != nil && len(m.Bcc) > 0
+	// We'll parse the slices into a list of addresses
+	// and then make sure that list isn't empty.
+	toAddrs, err := getAddressListString(m.To)
+	if err != nil {
+		return nil, err
+	}
+	ccAddrs, err := getAddressListString(m.Cc)
+	if err != nil {
+		return nil, err
+	}
+	bccAddrs, err := getAddressListString(m.Bcc)
+	if err != nil {
+		return nil, err
+	}
+
+	var hasTo = toAddrs != ""
+	var hasCc = ccAddrs != ""
+	var hasBcc = bccAddrs != ""
 
 	if !hasTo && !hasCc && !hasBcc {
 		return nil, ErrMissingRecipient
 	} else {
 		if hasTo {
-			toAddrs, err := getAddressListString(m.To)
-			if err != nil {
-				return nil, err
-			}
 			header.Add("To", toAddrs)
 		}
 		if hasCc {
-			ccAddrs, err := getAddressListString(m.Cc)
-			if err != nil {
-				return nil, err
-			}
 			header.Add("Cc", ccAddrs)
 		}
+		// BCC header is excluded on purpose.
+		// BCC recipients aren't included in the message
+		// headers and are only used at the SMTP level.
 	}
 
 	// Require From address
@@ -117,8 +129,6 @@ func (m *Message) Bytes() ([]byte, error) {
 
 	// Top level multipart writer for our `multipart/mixed` body.
 	mixedw := multipart.NewWriter(buffer)
-
-	var err error
 
 	header.Add("MIME-Version", "1.0")
 	header.Add("Content-Type", fmt.Sprintf("multipart/mixed;%s boundary=%s", crlf, mixedw.Boundary()))
@@ -320,6 +330,11 @@ func qEncodeAndWrap(input string, padding int) string {
 // Q encoded and wrapped onto its own line to help ensure that
 // the header line doesn't cross the 78 character maximum.
 func getAddressListString(addresses []string) (string, error) {
+	// Short circuit for empty or nil slices.
+	if addresses == nil || len(addresses) == 0 {
+		return "", nil
+	}
+
 	buffer := bytes.NewBuffer([]byte{})
 
 	for i, v := range addresses {
@@ -328,23 +343,26 @@ func getAddressListString(addresses []string) (string, error) {
 			return "", err
 		}
 
-		_, err = fmt.Fprint(buffer, parsedAddy.String())
-		if err != nil {
-			return "", err
-		}
-
-		// TODO(ANYONE): Currently we are splitting each address onto its own line
-		//               because this is the easiest way to ensure lines don't exceed
-		//               the max length. Ideally we wouldn't split until we actually
-		//               needed to.
-
-		// Separate multiple addresses with a comma
-		// and wrap them to their own line using whitespace folding.
-		// See RFC 2822 s2.2.3.
-		if i < len(addresses)-1 {
-			_, err := fmt.Fprint(buffer, ","+crlf+" ")
+		// Ignore empty addresses
+		if parsedAddy.String() != "" {
+			_, err = fmt.Fprint(buffer, parsedAddy.String())
 			if err != nil {
 				return "", err
+			}
+
+			// TODO(ANYONE): Currently we are splitting each address onto its own line
+			//               because this is the easiest way to ensure lines don't exceed
+			//               the max length. Ideally we wouldn't split until we actually
+			//               needed to.
+
+			// Separate multiple addresses with a comma
+			// and wrap them to their own line using whitespace folding.
+			// See RFC 2822 s2.2.3.
+			if i < len(addresses)-1 {
+				_, err := fmt.Fprint(buffer, ","+crlf+" ")
+				if err != nil {
+					return "", err
+				}
 			}
 		}
 	}
