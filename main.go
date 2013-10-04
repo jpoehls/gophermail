@@ -42,7 +42,8 @@ type Message struct {
 
 	Attachments []Attachment // optional
 
-	// TODO(JPOEHLS): Support extra mail headers? Things like On-Behalf-Of, In-Reply-To, List-Unsubscribe, etc.
+	// Extra mail headers.
+	Headers mail.Header
 }
 
 // An Attachment represents an email attachment.
@@ -125,6 +126,10 @@ func (m *Message) Bytes() ([]byte, error) {
 	// Optional Subject
 	if m.Subject != "" {
 		header.Add("Subject", qEncodeAndWrap(m.Subject, 9 /* len("Subject: ") */))
+	}
+
+	for k, v := range m.Headers {
+		header[k] = v
 	}
 
 	// Top level multipart writer for our `multipart/mixed` body.
