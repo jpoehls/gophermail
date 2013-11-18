@@ -235,14 +235,16 @@ func (m *Message) Bytes() ([]byte, error) {
 				return nil, err
 			}
 
-			encoder := NewBase64MimeEncoder(attachmentPart)
-			_, err = io.Copy(encoder, attachment.Data)
-			if err != nil {
-				return nil, err
-			}
-			err = encoder.Close()
-			if err != nil {
-				return nil, err
+			if attachment.Data != nil {
+				encoder := NewBase64MimeEncoder(attachmentPart)
+				_, err = io.Copy(encoder, attachment.Data)
+				if err != nil {
+					return nil, err
+				}
+				err = encoder.Close()
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 
