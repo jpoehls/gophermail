@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	//"github.com/sloonz/go-qprintable"
+	"github.com/sloonz/go-qprintable"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -165,8 +165,8 @@ func (m *Message) Bytes() ([]byte, error) {
 		if m.Body != "" {
 			header = textproto.MIMEHeader{}
 			header.Add("Content-Type", "text/plain; charset=utf-8")
-			//header.Add("Content-Transfer-Encoding", "quoted-printable")
-			header.Add("Content-Transfer-Encoding", "base64")
+			header.Add("Content-Transfer-Encoding", "quoted-printable")
+			//header.Add("Content-Transfer-Encoding", "base64")
 
 			partw, err := altw.CreatePart(header)
 			if err != nil {
@@ -174,8 +174,8 @@ func (m *Message) Bytes() ([]byte, error) {
 			}
 
 			bodyBytes := []byte(m.Body)
-			encoder := NewBase64MimeEncoder(partw)
-			//encoder := qprintable.NewEncoder(qprintable.DetectEncoding(m.Body), partw)
+			//encoder := NewBase64MimeEncoder(partw)
+			encoder := qprintable.NewEncoder(qprintable.DetectEncoding(m.Body), partw)
 			_, err = encoder.Write(bodyBytes)
 			if err != nil {
 				return nil, err
