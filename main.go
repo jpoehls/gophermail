@@ -37,8 +37,8 @@ type Message struct {
 
 	Subject string // optional
 
-	Body     string // optional
-	HTMLBody string // optional
+	Body     string       // optional
+	HTMLBody bytes.Buffer //optional
 
 	Attachments []Attachment // optional
 
@@ -150,7 +150,7 @@ func (m *Message) Bytes() ([]byte, error) {
 	}
 
 	// Does the message have a body?
-	if m.Body != "" || m.HTMLBody != "" {
+	if m.Body != "" || m.HTMLBody.Len() != 0 {
 
 		// Nested multipart writer for our `multipart/alternative` body.
 		altw := multipart.NewWriter(buffer)
@@ -186,7 +186,7 @@ func (m *Message) Bytes() ([]byte, error) {
 			}
 		}
 
-		if m.HTMLBody != "" {
+		if m.HTMLBody.Len() != 0 {
 			header = textproto.MIMEHeader{}
 			header.Add("Content-Type", "text/html; charset=utf-8")
 			//header.Add("Content-Transfer-Encoding", "quoted-printable")
@@ -197,10 +197,9 @@ func (m *Message) Bytes() ([]byte, error) {
 				return nil, err
 			}
 
-			htmlBodyBytes := []byte(m.HTMLBody)
-			encoder := NewBase64MimeEncoder(partw)
 			//encoder := qprintable.NewEncoder(qprintable.DetectEncoding(m.HTMLBody), partw)
-			_, err = encoder.Write(htmlBodyBytes)
+			encoder := NewBase64MimeEncoder(partw)
+			_, err = io.Copy(encoder, &m.HTMLBody)
 			if err != nil {
 				return nil, err
 			}
