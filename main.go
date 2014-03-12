@@ -382,10 +382,10 @@ func qEncodeAndWrap(input string, padding int) string {
 // Q encoded and wrapped onto its own line to help ensure that
 // the header line doesn't cross the 78 character maximum.
 func getAddressListString(addresses []mail.Address) string {
-	var address_strings []string
+	var addressStrings []string
 
 	for _, address := range addresses {
-		address_strings = append(address_strings, address.String())
+		addressStrings = append(addressStrings, address.String())
 	}
-	return strings.Join(address_strings, ","+crlf+" ")
+	return strings.Join(addressStrings, ","+crlf+" ")
 }
