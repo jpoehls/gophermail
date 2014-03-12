@@ -138,25 +138,24 @@ func (m *Message) Bytes() ([]byte, error) {
 
 	if !hasTo && !hasCc && !hasBcc {
 		return nil, ErrMissingRecipient
-	} else {
-		if hasTo {
-			header.Add("To", toAddrs)
-		}
-		if hasCc {
-			header.Add("Cc", ccAddrs)
-		}
-		// BCC header is excluded on purpose.
-		// BCC recipients aren't included in the message
-		// headers and are only used at the SMTP level.
 	}
+
+	if hasTo {
+		header.Add("To", toAddrs)
+	}
+	if hasCc {
+		header.Add("Cc", ccAddrs)
+	}
+	// BCC header is excluded on purpose.
+	// BCC recipients aren't included in the message
+	// headers and are only used at the SMTP level.
 
 	var emptyAddress mail.Address
 	// Require From address
 	if m.From == emptyAddress {
 		return nil, ErrMissingFromAddress
-	} else {
-		header.Add("From", m.From.String())
 	}
+	header.Add("From", m.From.String())
 
 	// Optional ReplyTo
 	if m.ReplyTo != emptyAddress {
