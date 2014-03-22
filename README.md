@@ -5,6 +5,10 @@ Something that the core sorely lacks.
 
 [View documentation on GoDoc](http://godoc.org/github.com/jpoehls/gophermail)
 
+## Importing
+
+`go get gopkg.in/jpoehls/v0/gophermail`
+
 ## Credits
 
 The API is heavily inspired by the [`code.google.com/p/appengine-go/appengine/mail`](https://code.google.com/p/appengine-go/source/browse/appengine/mail/mail.go) package.
