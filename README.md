@@ -7,7 +7,7 @@ Something that the core sorely lacks.
 
 ## Importing
 
-`go get gopkg.in/jpoehls/v0/gophermail`
+`go get gopkg.in/jpoehls/gophermail.v0`
 
 ## Credits
 
