@@ -9,11 +9,11 @@ Something that the core sorely lacks.
 
 Install the package with:
 
-  go get gopkg.in/jpoehls/gophermail.v0
+    go get gopkg.in/jpoehls/gophermail.v0
   
 Import it with:
 
-  import "gopkg.in/jpoehls/gophermail.v0"
+    import "gopkg.in/jpoehls/gophermail.v0"
   
 and use *gophermail* as the package name inside the code.
 
