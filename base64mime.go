@@ -8,9 +8,9 @@ import (
 
 var delimiter = []byte("\r\n") // CRLF
 
-// Lines should be no longer than 78 characters excluding the CRLF.
-// See RFC 2822.
-const maxLength = 78
+// Lines should be no longer than 76 characters excluding the CRLF.
+// See RFC 2045 and GitHub Issue #13.
+const maxLength = 76
 
 // splittingWriter is an io.WriteCloser that delimits
 // the written data into fixed length chunks using
