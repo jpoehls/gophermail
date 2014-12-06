@@ -164,7 +164,13 @@ func (m *Message) Bytes() ([]byte, error) {
 
 	// Optional Subject
 	if m.Subject != "" {
-		header.Add("Subject", qEncodeAndWrap(m.Subject, 9 /* len("Subject: ") */))
+		quotedSubject := qEncodeAndWrap(m.Subject, 9 /* len("Subject: ") */)
+		if quotedSubject[0] == '"' {
+			// qEncode used simple quoting, which adds quote
+			// characters to email subjects.
+			quotedSubject = quotedSubject[1 : len(quotedSubject)-1]
+		}
+		header.Add("Subject", quotedSubject)
 	}
 
 	for k, v := range m.Headers {
