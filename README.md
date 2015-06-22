@@ -5,6 +5,8 @@ Something that the core sorely lacks.
 
 [View API documentation on GoDoc](http://godoc.org/github.com/jpoehls/gophermail)
 
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jpoehls/gophermail?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
 ## Using
 
 Install the package with:
