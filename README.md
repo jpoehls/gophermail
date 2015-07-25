@@ -5,7 +5,7 @@ Something that the core sorely lacks.
 
 [View API documentation on GoDoc](http://godoc.org/github.com/jpoehls/gophermail)
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jpoehls/gophermail?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+**[Join us on Slack](https://gophers.slack.com/messages/gophermail/)** to chat with other gophermail developers! ([Request an invite](http://bit.ly/go-slack-signup), then join the #gophermail channel.)
 
 ## Using
 
