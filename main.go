@@ -345,7 +345,7 @@ func writeHeader(w io.Writer, header textproto.MIMEHeader) error {
 // Inspired by https://gist.github.com/andelf/5004821
 func qEncode(input string) string {
 	// use mail's rfc2047 to encode any string
-	addr := mail.Address{input, ""}
+	addr := mail.Address{Name: input, Address: ""}
 	s := addr.String()
 	return s[:len(s)-3]
 }
