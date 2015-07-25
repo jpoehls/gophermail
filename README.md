@@ -3,7 +3,19 @@
 gophermail is a simple package for sending mail using `net/smtp`.
 Something that the core sorely lacks.
 
-[View documentation on GoDoc](http://godoc.org/github.com/jpoehls/gophermail)
+[View API documentation on GoDoc](http://godoc.org/github.com/jpoehls/gophermail)
+
+## Using
+
+Install the package with:
+
+    go get gopkg.in/jpoehls/gophermail.v0
+  
+Import it with:
+
+    import "gopkg.in/jpoehls/gophermail.v0"
+  
+and use *gophermail* as the package name inside the code.
 
 ## Credits
 
