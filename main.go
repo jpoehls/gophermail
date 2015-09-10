@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/sloonz/go-qprintable"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -12,6 +11,8 @@ import (
 	"net/textproto"
 	"path/filepath"
 	"strings"
+
+	"github.com/sloonz/go-qprintable"
 )
 
 // Message Lint: http://tools.ietf.org/tools/msglint/
@@ -120,9 +121,13 @@ type Attachment struct {
 // Bytes gets the encoded MIME message.
 func (m *Message) Bytes() ([]byte, error) {
 	var buffer = &bytes.Buffer{}
-
 	header := textproto.MIMEHeader{}
 
+	return m.bytes(buffer, header)
+}
+
+// bytes gets the encoded MIME message
+func (m *Message) bytes(buffer *bytes.Buffer, header textproto.MIMEHeader) ([]byte, error) {
 	var err error
 
 	// Require To, Cc, or Bcc
@@ -168,7 +173,7 @@ func (m *Message) Bytes() ([]byte, error) {
 		if quotedSubject[0] == '"' {
 			// qEncode used simple quoting, which adds quote
 			// characters to email subjects.
-			quotedSubject = quotedSubject[1 : len(quotedSubject)-1]
+			quotedSubject = quotedSubject[1 : len(quotedSubject)-2]
 		}
 		header.Add("Subject", quotedSubject)
 	}
