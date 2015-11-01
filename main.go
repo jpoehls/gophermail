@@ -173,7 +173,7 @@ func (m *Message) bytes(buffer *bytes.Buffer, header textproto.MIMEHeader) ([]by
 		if quotedSubject[0] == '"' {
 			// qEncode used simple quoting, which adds quote
 			// characters to email subjects.
-			quotedSubject = quotedSubject[1 : len(quotedSubject)-2]
+			quotedSubject = quotedSubject[1 : len(quotedSubject)-1]
 		}
 		header.Add("Subject", quotedSubject)
 	}
