@@ -10,7 +10,7 @@ import (
 
 func simpleMessage() *Message {
 	m := &Message{}
-	m.SetFrom("Doman Sender <sender@domain.com>")
+	m.SetFrom("Domain Sender <sender@domain.com>")
 	m.AddTo("First person <to_1@domain.com>")
 	m.Subject = "My Subject"
 	m.Body = "My Plain Text Body"
@@ -20,7 +20,7 @@ func simpleMessage() *Message {
 
 func Test_Bytes(t *testing.T) {
 	m := &Message{}
-	m.SetFrom("Doman Sender <sender@domain.com>")
+	m.SetFrom("Domain Sender <sender@domain.com>")
 	m.SetReplyTo("Don't reply <noreply@domain.com>")
 	m.AddTo("First person <to_1@domain.com>")
 	m.AddTo("to_2@domain.com")
