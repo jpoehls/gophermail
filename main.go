@@ -19,7 +19,7 @@ import (
 
 const crlf = "\r\n"
 
-var ErrMissingRecipient = errors.New("No recipient specified. At one To, Cc, or Bcc recipient is required.")
+var ErrMissingRecipient = errors.New("No recipient specified. At least one To, Cc, or Bcc recipient is required.")
 var ErrMissingFromAddress = errors.New("No from address specified.")
 
 // A Message represents an email message.
